@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.notificationservice.service</a> &gt; <span class="el_source">NotificationServiceImpl.java</span></div><h1>NotificationServiceImpl.java</h1><pre class="source lang-java linenums">package com.khaphp.notificationservice.service;
+
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.common.entity.UserSystem;
+import com.khaphp.notificationservice.call.UserServiceCall;
+import com.khaphp.notificationservice.dto.NotificationDTOcreate;
+import com.khaphp.notificationservice.dto.NotificationDTOupdate;
+import com.khaphp.notificationservice.entity.Notification;
+import com.khaphp.notificationservice.repo.NotificationRepository;
+import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
+
+@Service
+<span class="nc" id="L21">@RequiredArgsConstructor</span>
+public class NotificationServiceImpl implements NotificationService {
+    private final NotificationRepository notificationRepository;
+    private final UserServiceCall userServiceCall;
+
+    @Autowired
+    private ModelMapper modelMapper;
+    @Override
+    public ResponseObject&lt;Object&gt; getAll(int pageSize, int pageIndex, String userId) {
+<span class="nc" id="L30">        Page&lt;Notification&gt; objListPage = null;</span>
+<span class="nc" id="L31">        List&lt;Notification&gt; objList = null;</span>
+<span class="nc" id="L32">        int totalPage = 0;</span>
+        //paging
+<span class="nc bnc" id="L34" title="All 4 branches missed.">        if(pageSize &gt; 0 &amp;&amp; pageIndex &gt; 0){</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">            if(!userId.equals(&quot;&quot;)){</span>
+<span class="nc" id="L36">                objListPage = notificationRepository.findByUserId(userId, PageRequest.of(pageIndex - 1, pageSize));</span>
+            }else{
+<span class="nc" id="L38">                objListPage = notificationRepository.findAll(PageRequest.of(pageIndex - 1, pageSize));  //vì current page ở code nó start = 0, hay bên ngoài la 2pga đầu tiên hay 1</span>
+            }
+<span class="nc bnc" id="L40" title="All 2 branches missed.">            if(objListPage != null){</span>
+<span class="nc" id="L41">                totalPage = objListPage.getTotalPages();</span>
+<span class="nc" id="L42">                objList = objListPage.getContent();</span>
+            }
+        }else{ //get all
+<span class="nc" id="L45">            objList = notificationRepository.findAll();</span>
+<span class="nc" id="L46">            pageIndex = 1;</span>
+        }
+<span class="nc" id="L48">        return ResponseObject.builder()</span>
+<span class="nc" id="L49">                .code(200).message(&quot;Success&quot;)</span>
+<span class="nc" id="L50">                .pageSize(objList.size()).pageIndex(pageIndex).totalPage(totalPage)</span>
+<span class="nc" id="L51">                .data(objList)</span>
+<span class="nc" id="L52">                .build();</span>
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; getDetail(String id) {
+        try{
+<span class="nc" id="L58">            Notification object = notificationRepository.findById(id).orElse(null);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">            if(object == null) {</span>
+<span class="nc" id="L60">                throw new Exception(&quot;object not found&quot;);</span>
+            }
+<span class="nc" id="L62">            return ResponseObject.builder()</span>
+<span class="nc" id="L63">                    .code(200)</span>
+<span class="nc" id="L64">                    .message(&quot;Found&quot;)</span>
+<span class="nc" id="L65">                    .data(object)</span>
+<span class="nc" id="L66">                    .build();</span>
+<span class="nc" id="L67">        }catch (Exception e){</span>
+<span class="nc" id="L68">            return ResponseObject.builder()</span>
+<span class="nc" id="L69">                    .code(400)</span>
+<span class="nc" id="L70">                    .message(&quot;Exception: &quot;+ e.getMessage())</span>
+<span class="nc" id="L71">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; create(NotificationDTOcreate object) {
+        try{
+<span class="nc" id="L78">            UserSystem userSystem = userServiceCall.getObject(object.getUserId());</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            if(userSystem == null){</span>
+<span class="nc" id="L80">                throw new Exception(&quot;user not found&quot;);</span>
+            }
+<span class="nc" id="L82">            Notification notification = modelMapper.map(object, Notification.class);</span>
+<span class="nc" id="L83">            notification.setUserId(userSystem.getId());</span>
+<span class="nc" id="L84">            notification.setCreateDate(new Date(System.currentTimeMillis()));</span>
+<span class="nc" id="L85">            notification.setSeen(false);</span>
+<span class="nc" id="L86">            notificationRepository.save(notification);</span>
+<span class="nc" id="L87">            return ResponseObject.builder()</span>
+<span class="nc" id="L88">                    .code(200)</span>
+<span class="nc" id="L89">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L90">                    .data(notification)</span>
+<span class="nc" id="L91">                    .build();</span>
+<span class="nc" id="L92">        }catch (Exception e){</span>
+<span class="nc" id="L93">            return ResponseObject.builder()</span>
+<span class="nc" id="L94">                    .code(400)</span>
+<span class="nc" id="L95">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L96">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; update(NotificationDTOupdate object) {
+        try{
+<span class="nc" id="L103">            Notification object1 = notificationRepository.findById(object.getId()).orElse(null);</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            if(object1 == null) {</span>
+<span class="nc" id="L105">                throw new Exception(&quot;object not found&quot;);</span>
+            }
+<span class="nc" id="L107">            object1.setTitle(object.getTitle());</span>
+<span class="nc" id="L108">            object1.setDescription(object.getDescription());</span>
+<span class="nc" id="L109">            notificationRepository.save(object1);</span>
+<span class="nc" id="L110">            return ResponseObject.builder()</span>
+<span class="nc" id="L111">                    .code(200)</span>
+<span class="nc" id="L112">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L113">                    .build();</span>
+<span class="nc" id="L114">        }catch (Exception e){</span>
+<span class="nc" id="L115">            return ResponseObject.builder()</span>
+<span class="nc" id="L116">                    .code(400)</span>
+<span class="nc" id="L117">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L118">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; updateSeen(String notIid) {
+        try{
+<span class="nc" id="L125">            Notification object1 = notificationRepository.findById(notIid).orElse(null);</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">            if(object1 == null) {</span>
+<span class="nc" id="L127">                throw new Exception(&quot;object not found&quot;);</span>
+            }
+<span class="nc" id="L129">            object1.setSeen(true);</span>
+<span class="nc" id="L130">            notificationRepository.save(object1);</span>
+<span class="nc" id="L131">            return ResponseObject.builder()</span>
+<span class="nc" id="L132">                    .code(200)</span>
+<span class="nc" id="L133">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L134">                    .build();</span>
+<span class="nc" id="L135">        }catch (Exception e){</span>
+<span class="nc" id="L136">            return ResponseObject.builder()</span>
+<span class="nc" id="L137">                    .code(400)</span>
+<span class="nc" id="L138">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L139">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; delete(String id) {
+        try{
+<span class="nc" id="L146">            Notification object = notificationRepository.findById(id).orElse(null);</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">            if(object == null) {</span>
+<span class="nc" id="L148">                throw new Exception(&quot;object not found&quot;);</span>
+            }
+<span class="nc" id="L150">            notificationRepository.delete(object);</span>
+<span class="nc" id="L151">            return ResponseObject.builder()</span>
+<span class="nc" id="L152">                    .code(200)</span>
+<span class="nc" id="L153">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L154">                    .build();</span>
+<span class="nc" id="L155">        }catch (Exception e){</span>
+<span class="nc" id="L156">            return ResponseObject.builder()</span>
+<span class="nc" id="L157">                    .code(400)</span>
+<span class="nc" id="L158">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L159">                    .build();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
