@@ -1,0 +1,5 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+food-service,com.khaphp.foodservice.service,FoodServiceImpl,393,0,22,0,115,0,20,0,9,0
+food-service,com.khaphp.foodservice.service,FoodEncylopediaServiceImpl,335,0,20,0,97,0,18,0,8,0
+food-service,com.khaphp.foodservice.controller,FoodEncylopediaController,104,0,12,0,25,0,13,0,7,0
+food-service,com.khaphp.foodservice.controller,FoodController,120,0,14,0,29,0,15,0,8,0
