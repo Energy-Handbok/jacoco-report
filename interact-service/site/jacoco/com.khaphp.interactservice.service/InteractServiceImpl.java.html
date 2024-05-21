@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InteractServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">interact-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.interactservice.service</a> &gt; <span class="el_source">InteractServiceImpl.java</span></div><h1>InteractServiceImpl.java</h1><pre class="source lang-java linenums">package com.khaphp.interactservice.service;
+
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.common.dto.noti.NotificationDTOcreate;
+import com.khaphp.common.entity.CookingRecipe;
+import com.khaphp.common.entity.UserSystem;
+import com.khaphp.interactservice.call.foodrecipeservice.FoodRecipeServiceCall;
+import com.khaphp.interactservice.call.notiservice.NotiServiceCall;
+import com.khaphp.interactservice.call.userservice.UserServiceCall;
+import com.khaphp.interactservice.constant.TypeInteract;
+import com.khaphp.interactservice.dto.interact.InteractDTOcreate;
+import com.khaphp.interactservice.entity.Interact;
+import com.khaphp.interactservice.exception.ObjectNotFound;
+import com.khaphp.interactservice.repo.InteractRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+<span class="nc" id="L24">@RequiredArgsConstructor</span>
+<span class="nc" id="L25">@Slf4j</span>
+public class InteractServiceImpl implements InteractService {
+    public static final String USER_NOT_FOUND_MSG = &quot;user not found&quot;;
+    public static final String YOU_HAVE_ALREADY_DONE_IT_MSG = &quot;you have already done it&quot;;
+    private final UserServiceCall userServiceCall;
+    private final FoodRecipeServiceCall foodRecipeServiceCall;
+    private final NotiServiceCall notiServiceCall;
+    private final InteractRepository interactRepository;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ResponseObject&lt;Object&gt; create(InteractDTOcreate object) {
+        try{
+<span class="nc" id="L38">            UserSystem userSystem = userServiceCall.getObject(object.getCustomerId());</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">            if(userSystem == null){</span>
+<span class="nc" id="L40">                throw new ObjectNotFound(USER_NOT_FOUND_MSG);</span>
+            }
+
+<span class="nc" id="L43">            CookingRecipe cookingRecipe = foodRecipeServiceCall.getDetail(object.getCookingRecipeId());</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">            if(cookingRecipe == null){</span>
+<span class="nc" id="L45">                throw new ObjectNotFound(&quot;cookingRecipe not found&quot;);</span>
+            }
+
+<span class="nc" id="L48">            List&lt;String&gt; gmailAlreadyShare = null;</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">            if(object.getTypeInteract().equals(TypeInteract.LIKE.toString())){</span>
+<span class="nc" id="L50">                Interact like = new Interact();</span>
+<span class="nc" id="L51">                like.setType(TypeInteract.LIKE);</span>
+<span class="nc" id="L52">                like.setCustomerId(userSystem.getId());</span>
+<span class="nc" id="L53">                like.setCookingRecipeId(cookingRecipe.getId());</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">                if(!interactRepository.existsByCustomerIdAndCookingRecipeIdAndType(</span>
+<span class="nc" id="L55">                        userSystem.getId(), cookingRecipe.getId(), TypeInteract.LIKE)){</span>
+<span class="nc" id="L56">                    interactRepository.save(like);</span>
+                }else{
+<span class="nc" id="L58">                    throw new Exception(YOU_HAVE_ALREADY_DONE_IT_MSG);</span>
+                }
+
+<span class="nc bnc" id="L61" title="All 2 branches missed.">            }else if(object.getTypeInteract().equals(TypeInteract.SHARE.toString())){</span>
+                //kiểm tra chỉnh chủ mới đc quyền share
+<span class="nc bnc" id="L63" title="All 2 branches missed.">                if(!userSystem.getId().equals(cookingRecipe.getCustomerId())){</span>
+<span class="nc" id="L64">                    throw new Exception(&quot;you can't share this recipe because you don't own it&quot;);</span>
+                }
+<span class="nc bnc" id="L66" title="All 2 branches missed.">                if(object.getGmails().size() &gt; 0){</span>
+<span class="nc" id="L67">                    gmailAlreadyShare = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">                    for(String gmail : object.getGmails()){</span>
+<span class="nc" id="L69">                        UserSystem user = userServiceCall.getDetailByEmail(gmail);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                        if(user == null){</span>
+<span class="nc" id="L71">                            throw new ObjectNotFound(&quot;user with gmail &quot;+gmail+&quot; not found&quot;);</span>
+                        }
+
+<span class="nc" id="L74">                        Interact share = new Interact();</span>
+<span class="nc" id="L75">                        share.setType(TypeInteract.SHARE);</span>
+<span class="nc" id="L76">                        share.setCustomerId(user.getId());</span>
+<span class="nc" id="L77">                        share.setCookingRecipeId(cookingRecipe.getId());</span>
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                        if(!interactRepository.existsByCustomerIdAndCookingRecipeIdAndType(</span>
+<span class="nc" id="L80">                                user.getId(), cookingRecipe.getId(), TypeInteract.SHARE)){</span>
+<span class="nc" id="L81">                            interactRepository.save(share);</span>
+                        }else{
+<span class="nc" id="L83">                            gmailAlreadyShare.add(gmail);</span>
+                        }
+<span class="nc" id="L85">                    }</span>
+                }
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            }else if(object.getTypeInteract().equals(TypeInteract.VOTE.toString())){</span>
+<span class="nc" id="L88">                Interact votes = null;</span>
+
+                //check xem đã vote chưa, nếu vote rồi thì chỉ cập nhật lại số star
+<span class="nc bnc" id="L91" title="All 2 branches missed.">                if(interactRepository.existsByCustomerIdAndCookingRecipeIdAndType(</span>
+<span class="nc" id="L92">                        userSystem.getId(), cookingRecipe.getId(), TypeInteract.VOTE)){</span>
+<span class="nc" id="L93">                    votes = interactRepository.findByCustomerIdAndCookingRecipeIdAndType(</span>
+<span class="nc" id="L94">                            userSystem.getId(), cookingRecipe.getId(), TypeInteract.VOTE);</span>
+<span class="nc" id="L95">                    votes.setStar(object.getStar());</span>
+                }else{
+<span class="nc" id="L97">                    votes = new Interact();</span>
+<span class="nc" id="L98">                    votes.setCookingRecipeId(cookingRecipe.getId());</span>
+<span class="nc" id="L99">                    votes.setCustomerId(userSystem.getId());</span>
+<span class="nc" id="L100">                    votes.setStar(object.getStar());</span>
+<span class="nc" id="L101">                    votes.setType(TypeInteract.VOTE);</span>
+                }
+<span class="nc" id="L103">                interactRepository.save(votes);</span>
+
+<span class="nc bnc" id="L105" title="All 2 branches missed.">            }else if(object.getTypeInteract().equals(TypeInteract.REPORT.toString())){</span>
+<span class="nc" id="L106">                Interact report = new Interact();</span>
+<span class="nc" id="L107">                report.setCookingRecipeId(cookingRecipe.getId());</span>
+<span class="nc" id="L108">                report.setCustomerId(userSystem.getId());</span>
+<span class="nc" id="L109">                report.setType(TypeInteract.REPORT);</span>
+
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                if(!interactRepository.existsByCustomerIdAndCookingRecipeIdAndType(</span>
+<span class="nc" id="L112">                        userSystem.getId(), cookingRecipe.getId(), TypeInteract.REPORT)){</span>
+<span class="nc" id="L113">                    interactRepository.save(report);</span>
+                }else{
+<span class="nc" id="L115">                    throw new Exception(YOU_HAVE_ALREADY_DONE_IT_MSG);</span>
+                }
+            }
+
+            //tạo notification cho owner cooking recipe
+            try{
+<span class="nc bnc" id="L121" title="All 2 branches missed.">                if(object.getTypeInteract().equals(TypeInteract.LIKE.toString())){</span>
+<span class="nc" id="L122">                    notiServiceCall.create(NotificationDTOcreate.builder()</span>
+<span class="nc" id="L123">                            .userId(cookingRecipe.getCustomerId())</span>
+<span class="nc" id="L124">                            .title(userSystem.getName() +&quot; đã thích công thức &quot; + cookingRecipe.getName())</span>
+<span class="nc" id="L125">                            .build());</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">                } else if(object.getTypeInteract().equals(TypeInteract.SHARE.toString())){ //noti cho người đc share công thức này</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                    for(String gmail : object.getGmails()){</span>
+<span class="nc bnc" id="L128" title="All 4 branches missed.">                        if(gmailAlreadyShare != null &amp;&amp; gmailAlreadyShare.contains(gmail)){</span>
+<span class="nc" id="L129">                            continue;</span>
+                        }
+<span class="nc" id="L131">                        UserSystem user = userServiceCall.getDetailByEmail(gmail);</span>
+<span class="nc" id="L132">                        UserSystem ownerRecipe = userServiceCall.getObject(cookingRecipe.getCustomerId());</span>
+<span class="nc" id="L133">                        notiServiceCall.create(NotificationDTOcreate.builder()</span>
+<span class="nc" id="L134">                                .userId(user.getId())</span>
+<span class="nc" id="L135">                                .title(ownerRecipe.getName() +&quot; đã chia sẻ công thức &quot;+cookingRecipe.getName() + &quot; với bạn&quot;)</span>
+<span class="nc" id="L136">                                .build());</span>
+<span class="nc" id="L137">                    }</span>
+                }
+<span class="nc" id="L139">            }catch (Exception ex){</span>
+<span class="nc" id="L140">                log.error(&quot;Exception when notification for user: &quot; + ex.getMessage());</span>
+<span class="nc" id="L141">            }</span>
+<span class="nc" id="L142">            return ResponseObject.builder()</span>
+<span class="nc" id="L143">                    .code(200)</span>
+<span class="nc" id="L144">                    .message(&quot;Success &quot; + object.getTypeInteract())</span>
+<span class="nc" id="L145">                    .build();</span>
+<span class="nc" id="L146">        }catch (Exception e){</span>
+<span class="nc" id="L147">            return ResponseObject.builder()</span>
+<span class="nc" id="L148">                    .code(400)</span>
+<span class="nc" id="L149">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L150">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; delete(String id) {
+        try{
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            if(interactRepository.existsById(id)){</span>
+<span class="nc" id="L158">                interactRepository.deleteById(id);</span>
+            }else{
+<span class="nc" id="L160">                throw new ObjectNotFound(&quot;Interact not found&quot;);</span>
+            }
+<span class="nc" id="L162">            return ResponseObject.builder()</span>
+<span class="nc" id="L163">                    .code(200)</span>
+<span class="nc" id="L164">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L165">                    .build();</span>
+<span class="nc" id="L166">        }catch (Exception e){</span>
+<span class="nc" id="L167">            return ResponseObject.builder()</span>
+<span class="nc" id="L168">                    .code(400)</span>
+<span class="nc" id="L169">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L170">                    .build();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

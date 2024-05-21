@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">interact-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.interactservice.controller</a> &gt; <span class="el_source">CommentController.java</span></div><h1>CommentController.java</h1><pre class="source lang-java linenums">package com.khaphp.interactservice.controller;
+
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.interactservice.dto.comment.CommentDTOcreate;
+import com.khaphp.interactservice.service.CommentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;api/v1/comment&quot;)
+//@SecurityRequirement(name = &quot;EnergyHandbook&quot;)
+<span class="nc" id="L16">@RequiredArgsConstructor</span>
+public class CommentController {
+    private final CommentService commentService;
+
+    @GetMapping
+    public ResponseEntity&lt;Object&gt; getAll(@RequestParam(defaultValue = &quot;10&quot;) int pageSize,
+                                    @RequestParam(defaultValue = &quot;1&quot;) int pageIndex,
+                                    @RequestParam(defaultValue = &quot;&quot;) String cookingRecipeId){
+<span class="nc" id="L24">        ResponseObject&lt;Object&gt; responseObject = commentService.getAll(pageSize, pageIndex, cookingRecipeId);</span>
+<span class="nc bnc" id="L25" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L26">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L28">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+    @GetMapping(&quot;/child-comment&quot;)
+    @Operation(description = &quot;load cmt, giống trong tiktok ấy, vd: pagesize=5, pageindex=1, thì lúc đầu load lần dầu là 5 item, nếu load lần 2 hay (pageindex=2) thì số lượng trả về là 10 item (5 của lần dầu + 5 của lần sau), tương tự nếu lần 3 là 15, 4 là 20, ...&quot;)
+    public ResponseEntity&lt;Object&gt; getObject(@Parameter(description = &quot;số lượng load mỗi lần tăng lên bao nhiêu&quot;) @RequestParam(defaultValue = &quot;5&quot;) int pageSize,
+                                       @Parameter(description = &quot;số lần load&quot;) @RequestParam(defaultValue = &quot;1&quot;) int pageIndex,
+                                       @RequestParam(defaultValue = &quot;&quot;) String id){
+<span class="nc" id="L35">        ResponseObject&lt;Object&gt; responseObject = commentService.getChildComment(id, pageSize, pageIndex);</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L37">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L39">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @PostMapping
+    @Operation(description = &quot;- owner là người viết cmt đó nha            \n&quot; +
+            &quot;- cookingRecipeId là chỉ id của cái cooking recipe mà mình cmt ở dưới                  \n&quot; +
+            &quot;- parentCommentId chứa id của 1 cmt parent ấy, giống tiktok ấy, vd: A cmt in Recipe, B reply A (hay lúc này A cmt sẽ là parent cmt và B cmt sẽ là child của nó) &quot; +
+            &quot;-&gt; lúc naỳ tất ca các reply trong phần A child này (cho dù nó ko reply chính thằng A cmt, nó reply thằng B cmt trong A child đó) -&gt; thì nó vẫn mang parentCommentId là A cmt, hay nó là tối cao&quot;)
+    public ResponseEntity&lt;Object&gt; createObject(@RequestBody @Valid CommentDTOcreate object){
+<span class="nc" id="L48">        ResponseObject&lt;Object&gt; responseObject = commentService.create(object);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L50">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L52">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @DeleteMapping
+    public ResponseEntity&lt;Object&gt; deleteObject(String id){
+<span class="nc" id="L57">        ResponseObject&lt;Object&gt; responseObject = commentService.delete(id);</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L59">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L61">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

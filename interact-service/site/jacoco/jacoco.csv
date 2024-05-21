@@ -1,0 +1,5 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+interact-service,com.khaphp.interactservice.controller,InteractController,39,0,4,0,9,0,5,0,3,0
+interact-service,com.khaphp.interactservice.controller,CommentController,74,0,8,0,17,0,9,0,5,0
+interact-service,com.khaphp.interactservice.service,InteractServiceImpl,402,0,40,0,98,0,24,0,4,0
+interact-service,com.khaphp.interactservice.service,CommentServiceImpl,502,0,32,0,131,0,24,0,8,0

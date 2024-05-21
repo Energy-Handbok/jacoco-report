@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommentServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">interact-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.interactservice.service</a> &gt; <span class="el_source">CommentServiceImpl.java</span></div><h1>CommentServiceImpl.java</h1><pre class="source lang-java linenums">package com.khaphp.interactservice.service;
+
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.common.dto.foodrecipe.CookingRecipeDTOviewInOrtherEntity;
+import com.khaphp.common.dto.noti.NotificationDTOcreate;
+import com.khaphp.common.dto.usersystem.UserSystemDTOviewInOrtherEntity;
+import com.khaphp.common.entity.CookingRecipe;
+import com.khaphp.common.entity.UserSystem;
+import com.khaphp.interactservice.call.foodrecipeservice.FoodRecipeServiceCall;
+import com.khaphp.interactservice.call.notiservice.NotiServiceCall;
+import com.khaphp.interactservice.call.userservice.UserServiceCall;
+import com.khaphp.interactservice.dto.comment.CommentChild;
+import com.khaphp.interactservice.dto.comment.CommentDTOcreate;
+import com.khaphp.interactservice.dto.comment.CommentDTOviewAll;
+import com.khaphp.interactservice.dto.comment.CommentDTOviewDetail;
+import com.khaphp.interactservice.entity.Comment;
+import com.khaphp.interactservice.exception.ObjectNotFound;
+import com.khaphp.interactservice.repo.CommentRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+@Service
+<span class="nc" id="L31">@RequiredArgsConstructor</span>
+<span class="nc" id="L32">@Slf4j</span>
+public class CommentServiceImpl implements CommentService {
+    public static final String OBJECT_NOT_FOUND = &quot;object not found&quot;;
+    public static final String SUCCESS = &quot;Success&quot;;
+    public static final String EXCEPTION_MSG = &quot;Exception: &quot;;
+    private final CommentRepository commentRepository;
+    private final UserServiceCall userServiceCall;
+    private final FoodRecipeServiceCall foodRecipeServiceCall;
+    private final ModelMapper modelMapper;
+    private final NotiServiceCall notiServiceCall;
+
+    @Override
+    public ResponseObject&lt;Object&gt; getAll(int pageSize, int pageIndex, String cookingRecipeId) {
+<span class="nc" id="L45">        Page&lt;Comment&gt; objListPage = null;</span>
+<span class="nc" id="L46">        List&lt;Comment&gt; objList = null;</span>
+<span class="nc" id="L47">        int totalPage = 0;</span>
+        //paging
+<span class="nc bnc" id="L49" title="All 4 branches missed.">        if(pageSize &gt; 0 &amp;&amp; pageIndex &gt; 0){</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            if(!cookingRecipeId.equals(&quot;&quot;)){</span>
+<span class="nc" id="L51">                objListPage = commentRepository.findAllCommentByCookingRecipeId(cookingRecipeId, PageRequest.of(pageIndex - 1, pageSize));</span>
+            }else{
+<span class="nc" id="L53">                objListPage = commentRepository.findAllComment(PageRequest.of(pageIndex - 1, pageSize));</span>
+            }
+<span class="nc bnc" id="L55" title="All 2 branches missed.">            if(objListPage != null){</span>
+<span class="nc" id="L56">                totalPage = objListPage.getTotalPages();</span>
+<span class="nc" id="L57">                objList = objListPage.getContent();</span>
+            }
+        }else{ //get all
+<span class="nc" id="L60">            objList = commentRepository.findAll();</span>
+<span class="nc" id="L61">            pageIndex = 1;</span>
+        }
+<span class="nc" id="L63">        List&lt;CommentDTOviewAll&gt; objListDTO = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        if(objList != null) {</span>
+<span class="nc" id="L65">            objList.forEach(object -&gt; {</span>
+<span class="nc" id="L66">                CommentDTOviewAll objectView = modelMapper.map(object, CommentDTOviewAll.class);</span>
+<span class="nc" id="L67">                objectView.setChildCmtSize(commentRepository.countAllByCookingRecipeIdAndParentCommentId(object.getCookingRecipeId(), object.getId()));</span>
+                //get owner
+<span class="nc" id="L69">                UserSystem owner = userServiceCall.getObject(object.getOwnerId());</span>
+<span class="nc" id="L70">                objectView.setOwnerV(UserSystemDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L71">                        .id(owner.getId())</span>
+<span class="nc" id="L72">                        .name(owner.getName())</span>
+<span class="nc" id="L73">                        .imgUrl(owner.getImgUrl()).build());</span>
+                //get cooking recipe
+<span class="nc" id="L75">                CookingRecipe cookingRecipe = foodRecipeServiceCall.getDetail(object.getCookingRecipeId());</span>
+<span class="nc" id="L76">                objectView.setCookingRecipeV(CookingRecipeDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L77">                        .id(cookingRecipe.getId())</span>
+<span class="nc" id="L78">                        .name(cookingRecipe.getName())</span>
+<span class="nc" id="L79">                        .build());</span>
+<span class="nc" id="L80">                objListDTO.add(objectView);</span>
+<span class="nc" id="L81">            });</span>
+        }
+
+<span class="nc" id="L84">        return ResponseObject.builder()</span>
+<span class="nc" id="L85">                .code(200).message(SUCCESS)</span>
+<span class="nc" id="L86">                .pageSize(objListDTO.size()).pageIndex(pageIndex).totalPage(totalPage)</span>
+<span class="nc" id="L87">                .data(objListDTO)</span>
+<span class="nc" id="L88">                .build();</span>
+    }
+
+    /**
+     * take the number of child cmt and return (the return include the number of rest child cmt)
+     */
+    @Override
+    public ResponseObject&lt;Object&gt; getChildComment(String id, int pageSize, int pageIndex) {
+        try{
+<span class="nc" id="L97">            Comment object = commentRepository.findById(id).orElse(null);</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if(object == null) {</span>
+<span class="nc" id="L99">                throw new ObjectNotFound(OBJECT_NOT_FOUND);</span>
+            }
+<span class="nc" id="L101">            CommentDTOviewDetail objectView = modelMapper.map(object, CommentDTOviewDetail.class);</span>
+
+<span class="nc" id="L103">            Page&lt;Comment&gt; listChildPage = commentRepository.findAllByCookingRecipeIdAndParentCommentIdOrderByCreateDate(object.getCookingRecipeId(), object.getId(), PageRequest.of(0, pageSize * pageIndex));</span>
+<span class="nc" id="L104">            int pagesize = 0;</span>
+            //calculate number of rest other child cmt (tính xem co la bao nhiêu cmt con)
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            if(listChildPage.getTotalElements() &gt; 0){</span>
+<span class="nc" id="L107">                List&lt;Comment&gt; listChild = listChildPage.getContent();</span>
+<span class="nc" id="L108">                pagesize = listChild.size();</span>
+                //set orther child cmt còn lại
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                if(listChildPage.getTotalElements() == listChild.size()){</span>
+<span class="nc" id="L111">                    objectView.setOrtherChildCmtSize(0);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">                }else if(listChildPage.getTotalElements() &gt; listChild.size()){</span>
+<span class="nc" id="L113">                    objectView.setOrtherChildCmtSize((int) (listChildPage.getTotalElements() - listChild.size()));</span>
+                }
+
+                //map data
+<span class="nc" id="L117">                objectView.setCommentChildrens(new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L118">                listChild.forEach(x -&gt; {</span>
+<span class="nc" id="L119">                    CommentChild objectChild = modelMapper.map(x, CommentChild.class);</span>
+
+                    //take cooking recipe
+<span class="nc" id="L122">                    CookingRecipe cookingRecipe = foodRecipeServiceCall.getDetail(x.getCookingRecipeId());</span>
+<span class="nc" id="L123">                    objectChild.setCookingRecipeV(CookingRecipeDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L124">                            .id(x.getCookingRecipeId())</span>
+<span class="nc" id="L125">                            .name(cookingRecipe.getName())</span>
+<span class="nc" id="L126">                            .build());</span>
+
+                    //get owner
+<span class="nc" id="L129">                    UserSystem owner = userServiceCall.getObject(x.getOwnerId());</span>
+<span class="nc" id="L130">                    objectChild.setOwnerV(UserSystemDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L131">                            .id(owner.getId())</span>
+<span class="nc" id="L132">                            .name(owner.getName())</span>
+<span class="nc" id="L133">                            .imgUrl(owner.getImgUrl())</span>
+<span class="nc" id="L134">                            .build());</span>
+
+                    //get user have been reply by owner
+<span class="nc" id="L137">                    UserSystem replyTo = userServiceCall.getObject(x.getReplyTo());</span>
+<span class="nc" id="L138">                    objectChild.setReplyTo(UserSystemDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L139">                            .id(replyTo.getId())</span>
+<span class="nc" id="L140">                            .name(replyTo.getName())</span>
+<span class="nc" id="L141">                            .imgUrl(replyTo.getImgUrl())</span>
+<span class="nc" id="L142">                            .build());</span>
+<span class="nc" id="L143">                    objectView.getCommentChildrens().add(objectChild);</span>
+<span class="nc" id="L144">                });</span>
+            }
+<span class="nc" id="L146">            return ResponseObject.builder()</span>
+<span class="nc" id="L147">                    .code(200).message(&quot;Found&quot;)</span>
+<span class="nc" id="L148">                    .data(objectView)</span>
+<span class="nc" id="L149">                    .pageSize(pagesize)</span>
+<span class="nc" id="L150">                    .build();</span>
+<span class="nc" id="L151">        }catch (Exception e){</span>
+<span class="nc" id="L152">            return ResponseObject.builder()</span>
+<span class="nc" id="L153">                    .code(400).message(EXCEPTION_MSG + e.getMessage())</span>
+<span class="nc" id="L154">                    .build();</span>
+        }
+    }
+
+    /**
+     * create cmt and notify if someone answer, reply the owner of the recipe
+     */
+    @Override
+    public ResponseObject&lt;Object&gt; create(CommentDTOcreate object) {
+        try{
+<span class="nc" id="L164">            UserSystem owner = userServiceCall.getObject(object.getOwnerId());</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if(owner == null){</span>
+<span class="nc" id="L166">                throw new ObjectNotFound(&quot;owner not found&quot;);</span>
+            }
+
+<span class="nc" id="L169">            UserSystem replyTo = userServiceCall.getObject(object.getReplyToId());</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">            if(replyTo == null){</span>
+<span class="nc" id="L171">                throw new ObjectNotFound(&quot;replyTo user not found&quot;);</span>
+            }
+
+<span class="nc" id="L174">            CookingRecipe cookingRecipe = foodRecipeServiceCall.getDetail(object.getCookingRecipeId());</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">            if(cookingRecipe == null){</span>
+<span class="nc" id="L176">                throw new ObjectNotFound(&quot;cookingRecipe not found&quot;);</span>
+            }
+
+<span class="nc" id="L179">            Comment comment = modelMapper.map(object, Comment.class);</span>
+<span class="nc" id="L180">            comment.setOwnerId(owner.getId());</span>
+<span class="nc" id="L181">            comment.setReplyTo(replyTo.getId());</span>
+<span class="nc" id="L182">            comment.setCookingRecipeId(cookingRecipe.getId());</span>
+<span class="nc" id="L183">            comment.setCreateDate(new Date(System.currentTimeMillis()));</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">            if(comment.getParentCommentId() == null){</span>
+<span class="nc" id="L185">                comment.setParentCommentId(&quot;&quot;);</span>
+            }
+<span class="nc" id="L187">            commentRepository.save(comment);</span>
+
+            //notify if customer comment answer owner of cooking recipe
+            try{
+<span class="nc bnc" id="L191" title="All 2 branches missed.">                if(cookingRecipe.getCustomerId().equals(replyTo.getId())){</span>
+<span class="nc" id="L192">                    notiServiceCall.create(NotificationDTOcreate.builder()</span>
+<span class="nc" id="L193">                            .userId(cookingRecipe.getCustomerId())</span>
+<span class="nc" id="L194">                            .title(owner.getName() +&quot; đã bình luận vào công thức &quot; + cookingRecipe.getName())</span>
+<span class="nc" id="L195">                            .build());</span>
+                }
+<span class="nc" id="L197">            }catch (Exception e){</span>
+<span class="nc" id="L198">                log.error(&quot;Error notify for owner of cooking recipe when someone cmt to it: &quot; + e.getMessage());</span>
+<span class="nc" id="L199">            }</span>
+<span class="nc" id="L200">            return ResponseObject.builder()</span>
+<span class="nc" id="L201">                    .code(200)</span>
+<span class="nc" id="L202">                    .message(SUCCESS)</span>
+<span class="nc" id="L203">                    .data(comment)</span>
+<span class="nc" id="L204">                    .build();</span>
+<span class="nc" id="L205">        }catch (Exception e){</span>
+<span class="nc" id="L206">            return ResponseObject.builder()</span>
+<span class="nc" id="L207">                    .code(400)</span>
+<span class="nc" id="L208">                    .message(EXCEPTION_MSG + e.getMessage())</span>
+<span class="nc" id="L209">                    .build();</span>
+        }
+    }
+
+    /**
+     * if cmt has child cmt -&gt; change body of parents cmt to &quot;[ Bình luận này đã bị xóa ]&quot;
+     * if cmt not has child cmt -&gt; delete
+     */
+    @Override
+    public ResponseObject&lt;Object&gt; delete(String id) {
+        try{
+<span class="nc" id="L220">            Comment object = commentRepository.findById(id).orElse(null);</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">            if(object == null) {</span>
+<span class="nc" id="L222">                throw new ObjectNotFound(OBJECT_NOT_FOUND);</span>
+            }
+<span class="nc bnc" id="L224" title="All 2 branches missed.">            if(commentRepository.countAllByCookingRecipeIdAndParentCommentId(object.getCookingRecipeId(), object.getId()) &gt; 0){</span>
+<span class="nc" id="L225">                object.setBody(&quot;[ Bình luận này đã bị xóa ]&quot;);</span>
+<span class="nc" id="L226">                commentRepository.save(object);</span>
+            }else{
+<span class="nc" id="L228">                commentRepository.delete(object);</span>
+            }
+<span class="nc" id="L230">            return ResponseObject.builder()</span>
+<span class="nc" id="L231">                    .code(200)</span>
+<span class="nc" id="L232">                    .message(SUCCESS)</span>
+<span class="nc" id="L233">                    .build();</span>
+<span class="nc" id="L234">        }catch (Exception e){</span>
+<span class="nc" id="L235">            return ResponseObject.builder()</span>
+<span class="nc" id="L236">                    .code(400)</span>
+<span class="nc" id="L237">                    .message(EXCEPTION_MSG + e.getMessage())</span>
+<span class="nc" id="L238">                    .build();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
