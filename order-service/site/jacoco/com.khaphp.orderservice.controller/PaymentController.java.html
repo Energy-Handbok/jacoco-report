@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">order-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.orderservice.controller</a> &gt; <span class="el_source">PaymentController.java</span></div><h1>PaymentController.java</h1><pre class="source lang-java linenums">package com.khaphp.orderservice.controller;
+
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.orderservice.service.vnpay.PaymentService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(&quot;api/payment&quot;)
+<span class="nc" id="L16">@RequiredArgsConstructor</span>
+public class PaymentController {
+    private final PaymentService paymentService;
+
+    @GetMapping
+    public ResponseEntity&lt;?&gt; getAll(HttpServletRequest req,
+                                    @RequestParam @Min(10000) int amount,
+                                    @RequestParam String customerId){
+<span class="nc" id="L24">        ResponseObject&lt;?&gt; responseObject = paymentService.createPayment(req, amount, customerId, false, &quot;&quot;);</span>
+<span class="nc bnc" id="L25" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L26">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L28">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @GetMapping(&quot;/payment_result&quot;)
+    public ResponseEntity&lt;?&gt; transaction(   //hàm bắt kq giao dịch (transaction - success, fail, hủy thanh toán, ...) về từ VNPAY
+                                            @RequestParam(value = &quot;vnp_Amount&quot;) String vnp_Amount,
+                                            @RequestParam(value = &quot;vnp_BankCode&quot;) String vnp_BankCode,
+                                            @RequestParam(value = &quot;vnp_OrderInfo&quot;) String vnp_OrderInfo,
+                                            @RequestParam(value = &quot;vnp_PayDate&quot;) String vnp_PayDate,
+                                            @RequestParam(value = &quot;vnp_ResponseCode&quot;) String vnp_ResponseCode) {
+<span class="nc" id="L38">        ResponseObject&lt;?&gt; rs = paymentService.resultTransaction(vnp_Amount, vnp_BankCode, vnp_OrderInfo, vnp_PayDate, vnp_ResponseCode);</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">        if(rs.getCode() == 200){</span>
+<span class="nc" id="L40">            return ResponseEntity.ok(rs);</span>
+        }else {
+<span class="nc" id="L42">            return ResponseEntity.badRequest().body(rs);</span>
+        }
+//      HttpHeaders headers = new HttpHeaders();
+//        if (rs.getCode() == 200) {
+//            rs.setCode(200);
+//            if(rs.getMessage().contains(&quot;guest&quot;)){
+//                headers.add(HttpHeaders.LOCATION, vnPayHelper.vnp_RedirectResultGuestBooking_success);
+//            }else{
+//                headers.add(HttpHeaders.LOCATION, VnPayHelper.vnp_RedirectResult + &quot;?status=success&quot;);
+//            }
+            //redirect qua URl khác
+//            return new ResponseEntity&lt;&gt;(headers, HttpStatus.FOUND);
+//        }else{
+//            rs.setCode(400);
+//            if(rs.getMessage().contains(&quot;guest&quot;)){
+//                headers.add(HttpHeaders.LOCATION, VnPayHelper.vnp_RedirectResultGuestBooking_fail);
+//            }else{
+//                headers.add(HttpHeaders.LOCATION, VnPayHelper.vnp_RedirectResult + &quot;?status=fail&quot;);
+//            }
+//            return new ResponseEntity&lt;&gt;(headers, HttpStatus.FOUND);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

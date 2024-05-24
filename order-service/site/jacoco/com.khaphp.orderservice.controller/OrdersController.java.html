@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrdersController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">order-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.orderservice.controller</a> &gt; <span class="el_source">OrdersController.java</span></div><h1>OrdersController.java</h1><pre class="source lang-java linenums">package com.khaphp.orderservice.controller;
+
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.orderservice.dto.Order.OrderDTOcreate;
+import com.khaphp.orderservice.dto.Order.OrderDTOupdate;
+import com.khaphp.orderservice.dto.Order.ParamCancelOrder;
+import com.khaphp.orderservice.dto.Order.ParamOrderShipperId;
+import com.khaphp.orderservice.service.OrdersService;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;api/v1/order&quot;)
+//@SecurityRequirement(name = &quot;EnergyHandbook&quot;)
+<span class="nc" id="L19">@RequiredArgsConstructor</span>
+public class OrdersController {
+    private final OrdersService ordersService;
+
+    @GetMapping
+    public ResponseEntity&lt;Object&gt; getAll(@RequestParam(defaultValue = &quot;10&quot;) int pageSize,
+                                    @RequestParam(defaultValue = &quot;1&quot;) int pageIndex){
+<span class="nc" id="L26">        ResponseObject&lt;Object&gt; responseObject = ordersService.getAll(pageSize, pageIndex);</span>
+<span class="nc bnc" id="L27" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L28">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L30">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+    @GetMapping(&quot;/detail&quot;)
+    public ResponseEntity&lt;Object&gt; getObject(String id){
+<span class="nc" id="L34">        ResponseObject&lt;Object&gt; responseObject = ordersService.getDetail(id);</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L36">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L38">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @PostMapping
+    @Operation(summary = &quot;COD (guest, cus), WALLET (GUEST)&quot;,
+    description = &quot;nếu guest thì khỏi truyền customerId, còn nếu cus thìkho3oi3 truyền name, phone, address guest về&quot;)
+    public ResponseEntity&lt;Object&gt; createObject(@RequestBody @Valid OrderDTOcreate object) throws Exception {
+        try{
+<span class="nc" id="L46">            ResponseObject&lt;Object&gt; responseObject = ordersService.create(object);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L48">                return ResponseEntity.ok(responseObject);</span>
+            }
+<span class="nc" id="L50">            return ResponseEntity.badRequest().body(responseObject);</span>
+<span class="nc" id="L51">        }catch (Exception e){</span>
+<span class="nc" id="L52">            return ResponseEntity.badRequest().body(ResponseObject.builder()</span>
+<span class="nc" id="L53">                    .code(400).message(e.getMessage())</span>
+<span class="nc" id="L54">                    .build());</span>
+        }
+    }
+
+    @PostMapping(&quot;/third-party&quot;)
+    @Operation(
+            summary = &quot;THIRD PARTY (guest, cus)&quot;,
+            description = &quot;- nếu guest thì khỏi truyền customerId                        \n&quot; +
+                    &quot;- còn nếu cus thì khỏi truyền name, phone, address guest về&quot;)
+    public ResponseEntity&lt;Object&gt; createObject3Party(HttpServletRequest request, @RequestBody @Valid OrderDTOcreate object) throws Exception {
+        try{
+<span class="nc" id="L65">            ResponseObject&lt;Object&gt; responseObject = ordersService.orderThirdParty(request, object);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L67">                return ResponseEntity.ok(responseObject);</span>
+            }
+<span class="nc" id="L69">            return ResponseEntity.badRequest().body(responseObject);</span>
+<span class="nc" id="L70">        }catch (Exception e){</span>
+<span class="nc" id="L71">            return ResponseEntity.badRequest().body(ResponseObject.builder()</span>
+<span class="nc" id="L72">                    .code(400).message(e.getMessage())</span>
+<span class="nc" id="L73">                    .build());</span>
+        }
+    }
+
+    @PutMapping(&quot;/status&quot;)
+    public ResponseEntity&lt;Object&gt; updateObjectStatus(@RequestBody @Valid OrderDTOupdate object){
+<span class="nc" id="L79">        ResponseObject&lt;Object&gt; responseObject = ordersService.updateStatus(object);</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L81">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L83">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @PutMapping(&quot;/shipper-take&quot;)
+    public ResponseEntity&lt;Object&gt; updateShipperTakeOrder(@RequestBody @Valid ParamOrderShipperId object){
+<span class="nc" id="L88">        ResponseObject&lt;Object&gt; responseObject = ordersService.updateShipperTakeOrder(object.getOrderId(), object.getShipperId());</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L90">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L92">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @PutMapping(&quot;/finish-delivery&quot;)
+    public ResponseEntity&lt;Object&gt; finishDeilivery(@RequestBody @Valid ParamOrderShipperId object){
+<span class="nc" id="L97">        ResponseObject&lt;Object&gt; responseObject = ordersService.finishDeilivery(object.getOrderId(), object.getShipperId());</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L99">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L101">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @PutMapping(&quot;/cancel&quot;)
+    @Operation(description = &quot;nếu ai là người hủy thì điển role + id của ng đó vào thôi&quot;)
+    public ResponseEntity&lt;Object&gt; cancelOrder(@RequestBody @Valid ParamCancelOrder object){
+<span class="nc" id="L107">        ResponseObject&lt;Object&gt; responseObject = ordersService.cancelOrder(object.getOrderId(), object.getUserId(), object.getRole());</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L109">            return ResponseEntity.ok(responseObject);</span>
+        }
+<span class="nc" id="L111">        return ResponseEntity.badRequest().body(responseObject);</span>
+    }
+
+    @DeleteMapping
+    public ResponseEntity&lt;Object&gt; deleteObject(String id){
+        try{
+<span class="nc" id="L117">            ResponseObject&lt;Object&gt; responseObject = ordersService.delete(id);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">            if(responseObject.getCode() == 200){</span>
+<span class="nc" id="L119">                return ResponseEntity.ok(responseObject);</span>
+            }
+<span class="nc" id="L121">            return ResponseEntity.badRequest().body(responseObject);</span>
+<span class="nc" id="L122">        }catch (Exception e){</span>
+<span class="nc" id="L123">            return ResponseEntity.badRequest().body(ResponseObject.builder()</span>
+<span class="nc" id="L124">                    .code(400).message(e.getMessage())</span>
+<span class="nc" id="L125">                    .build());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

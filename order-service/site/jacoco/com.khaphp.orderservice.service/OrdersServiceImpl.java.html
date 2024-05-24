@@ -1,0 +1,561 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrdersServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">order-service</a> &gt; <a href="index.source.html" class="el_package">com.khaphp.orderservice.service</a> &gt; <span class="el_source">OrdersServiceImpl.java</span></div><h1>OrdersServiceImpl.java</h1><pre class="source lang-java linenums">package com.khaphp.orderservice.service;
+
+import com.khaphp.common.constant.EmailDefault;
+import com.khaphp.common.constant.Role;
+import com.khaphp.common.dto.ResponseObject;
+import com.khaphp.common.dto.food.FoodDTOupdate;
+import com.khaphp.common.dto.food.FoodDTOviewInOrtherEntity;
+import com.khaphp.common.dto.noti.NotificationDTOcreate;
+import com.khaphp.common.dto.payment.WalletDTOupdate;
+import com.khaphp.common.dto.payment.WalletTransactionDTOcreate;
+import com.khaphp.common.dto.usersystem.UserSystemDTOviewInOrtherEntity;
+import com.khaphp.common.entity.Food;
+import com.khaphp.common.entity.UserSystem;
+import com.khaphp.common.entity.Wallet;
+import com.khaphp.orderservice.call.food.FoodServiceCall;
+import com.khaphp.orderservice.call.notiservice.NotiServiceCall;
+import com.khaphp.orderservice.call.payment.PaymentServiceCall;
+import com.khaphp.orderservice.call.userservice.UserServiceCall;
+import com.khaphp.orderservice.constant.Method;
+import com.khaphp.orderservice.constant.StatusOrder;
+import com.khaphp.orderservice.constant.StatusResponse;
+import com.khaphp.orderservice.dto.Order.OrderDTOcreate;
+import com.khaphp.orderservice.dto.Order.OrderDTOupdate;
+import com.khaphp.orderservice.dto.Order.OrderDTOviewDetail;
+import com.khaphp.orderservice.dto.OrderDetail.OrderDetailDTOcreate;
+import com.khaphp.orderservice.dto.OrderDetail.OrderDetailDToviewInOrtherEntity;
+import com.khaphp.orderservice.entity.Order;
+import com.khaphp.orderservice.entity.OrderDetail;
+import com.khaphp.orderservice.entity.PaymentOrder;
+import com.khaphp.orderservice.exception.ObjectNotFound;
+import com.khaphp.orderservice.repo.OrderDetailRepository;
+import com.khaphp.orderservice.repo.OrdersRepository;
+import com.khaphp.orderservice.repo.PaymentOrderRepository;
+import com.khaphp.orderservice.service.vnpay.PaymentService;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+
+@Service
+<span class="nc" id="L53">@RequiredArgsConstructor</span>
+<span class="nc" id="L54">@Slf4j</span>
+public class OrdersServiceImpl implements OrdersService {
+    public static final String OBJECT_NOT_FOUND = &quot;object not found&quot;;
+    private final OrdersRepository ordersRepository;
+    private final PaymentServiceCall paymentServiceCall;
+    private final OrderDetailRepository orderDetailRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
+    private final UserServiceCall userServiceCall;
+    private final FoodServiceCall foodServiceCall;
+    private final ModelMapper modelMapper;
+    private final RestTemplate restTemplate;
+    private final NotiServiceCall notiServiceCall;
+    private final PaymentService paymentService;
+
+    @Value(&quot;${aws.s3.link_bucket}&quot;)
+    private String linkBucket;
+
+
+    @Override
+    public ResponseObject&lt;Object&gt; getAll(int pageSize, int pageIndex) {
+<span class="nc" id="L74">        Page&lt;Order&gt; objListPage = null;</span>
+<span class="nc" id="L75">        List&lt;Order&gt; objList = null;</span>
+<span class="nc" id="L76">        int totalPage = 0;</span>
+        //paging
+<span class="nc bnc" id="L78" title="All 4 branches missed.">        if(pageSize &gt; 0 &amp;&amp; pageIndex &gt; 0){</span>
+<span class="nc" id="L79">            objListPage = ordersRepository.findAll(PageRequest.of(pageIndex - 1, pageSize));  //vì current page ở code nó start = 0, hay bên ngoài la 2pga đầu tiên hay 1</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">            if(objListPage != null){</span>
+<span class="nc" id="L81">                totalPage = objListPage.getTotalPages();</span>
+<span class="nc" id="L82">                objList = objListPage.getContent();</span>
+            }
+        }else{ //get all
+<span class="nc" id="L85">            objList = ordersRepository.findAll();</span>
+<span class="nc" id="L86">            pageIndex = 1;</span>
+        }
+<span class="nc" id="L88">        return ResponseObject.builder()</span>
+<span class="nc" id="L89">                .code(200).message(&quot;Success&quot;)</span>
+<span class="nc" id="L90">                .pageSize(objList.size()).pageIndex(pageIndex).totalPage(totalPage)</span>
+<span class="nc" id="L91">                .data(objList)</span>
+<span class="nc" id="L92">                .build();</span>
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; getDetail(String id) {
+        try{
+<span class="nc" id="L98">            Order object = ordersRepository.findById(id).orElse(null);</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            if(object == null) {</span>
+<span class="nc" id="L100">                throw new ObjectNotFound(OBJECT_NOT_FOUND);</span>
+            }
+<span class="nc" id="L102">            OrderDTOviewDetail dto = modelMapper.map(object, OrderDTOviewDetail.class);</span>
+            //get customer
+<span class="nc" id="L104">            UserSystem customer = userServiceCall.getObject(object.getCustomerId());</span>
+<span class="nc" id="L105">            dto.setCustomerV(UserSystemDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L106">                    .id(customer.getId())</span>
+<span class="nc" id="L107">                    .name(customer.getName())</span>
+<span class="nc" id="L108">                    .imgUrl(customer.getImgUrl())</span>
+<span class="nc" id="L109">                    .build());</span>
+
+            //get customer
+<span class="nc" id="L112">            UserSystem employee = userServiceCall.getObject(object.getEmployeeId());</span>
+<span class="nc" id="L113">            dto.setEmployeeV(UserSystemDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L114">                    .id(employee.getId())</span>
+<span class="nc" id="L115">                    .name(employee.getName())</span>
+<span class="nc" id="L116">                    .imgUrl(employee.getImgUrl())</span>
+<span class="nc" id="L117">                    .build());</span>
+
+            //get customer
+<span class="nc" id="L120">            UserSystem shipper = userServiceCall.getObject(object.getShipperId());</span>
+<span class="nc" id="L121">            dto.setShipperV(UserSystemDTOviewInOrtherEntity.builder()</span>
+<span class="nc" id="L122">                    .id(shipper.getId())</span>
+<span class="nc" id="L123">                    .name(shipper.getName())</span>
+<span class="nc" id="L124">                    .imgUrl(shipper.getImgUrl())</span>
+<span class="nc" id="L125">                    .build());</span>
+
+<span class="nc" id="L127">            dto.setOrderDetailsV(new ArrayList&lt;&gt;());</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">            for (OrderDetail orderDetail : object.getOrderDetails()) {</span>
+<span class="nc" id="L129">                OrderDetailDToviewInOrtherEntity orderDetailDToviewInOrtherEntity = modelMapper.map(orderDetail, OrderDetailDToviewInOrtherEntity.class);</span>
+                //get food
+<span class="nc" id="L131">                Food food = foodServiceCall.getDetail(orderDetail.getFoodId());</span>
+<span class="nc" id="L132">                FoodDTOviewInOrtherEntity foodDTOviewInOrtherEntity = modelMapper.map(food, FoodDTOviewInOrtherEntity.class);</span>
+<span class="nc" id="L133">                foodDTOviewInOrtherEntity.setImg(linkBucket + foodDTOviewInOrtherEntity.getImg());</span>
+<span class="nc" id="L134">                orderDetailDToviewInOrtherEntity.setFoodV(foodDTOviewInOrtherEntity);</span>
+<span class="nc" id="L135">                dto.getOrderDetailsV().add(orderDetailDToviewInOrtherEntity);</span>
+<span class="nc" id="L136">            }</span>
+<span class="nc" id="L137">            return ResponseObject.builder()</span>
+<span class="nc" id="L138">                    .code(200)</span>
+<span class="nc" id="L139">                    .message(&quot;Found&quot;)</span>
+<span class="nc" id="L140">                    .data(dto)</span>
+<span class="nc" id="L141">                    .build();</span>
+<span class="nc" id="L142">        }catch (Exception e){</span>
+<span class="nc" id="L143">            return ResponseObject.builder()</span>
+<span class="nc" id="L144">                    .code(400)</span>
+<span class="nc" id="L145">                    .message(&quot;Exception: &quot;+ e.getMessage())</span>
+<span class="nc" id="L146">                    .build();</span>
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ResponseObject&lt;Object&gt; create(OrderDTOcreate object) throws Exception {
+        try{
+            //check user
+<span class="nc" id="L155">            UserSystem userSystem = validateUserInOrder(object);</span>
+
+            //create order trc
+<span class="nc" id="L158">            Order order = createOrder(userSystem, object);</span>
+<span class="nc" id="L159">            order = ordersRepository.save(order);</span>
+
+            //nếu là wallet thì check balance để trừ tiền
+<span class="nc bnc" id="L162" title="All 2 branches missed.">            if(object.getMethod().equals(Method.WALLET.toString())){</span>
+<span class="nc" id="L163">                checkBalanceToMinus(order, userSystem, object);</span>
+            }
+
+            //create order detail
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            for (OrderDetailDTOcreate orderDetailDTOcreate : object.getOrderDetails()) {</span>
+<span class="nc" id="L168">                OrderDetail orderDetail = createOrderDetail(order, orderDetailDTOcreate);</span>
+                //cập nhật total price cho order
+<span class="nc" id="L170">                order.setTotalPrice(order.getTotalPrice() + (orderDetail.getAmount() * orderDetail.getPrice()));</span>
+<span class="nc" id="L171">            }</span>
+
+            //create payment order
+<span class="nc" id="L174">            createPaymentOrder(order, object);</span>
+
+<span class="nc" id="L176">            return ResponseObject.builder()</span>
+<span class="nc" id="L177">                    .code(200)</span>
+<span class="nc" id="L178">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L179">                    .data(order)</span>
+<span class="nc" id="L180">                    .build();</span>
+<span class="nc" id="L181">        }catch (Exception e){</span>
+<span class="nc" id="L182">            throw new Exception(&quot;Exception: &quot; + e.getMessage());</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; orderThirdParty(HttpServletRequest req, OrderDTOcreate object) throws Exception {
+        try{
+            //check user
+<span class="nc" id="L190">            UserSystem userSystem = validateUserInOrder(object);</span>
+
+            //create order trc
+<span class="nc" id="L193">            Order order = createOrder(userSystem, object);</span>
+<span class="nc" id="L194">            order = ordersRepository.save(order);</span>
+
+            //create order detail
+<span class="nc bnc" id="L197" title="All 2 branches missed.">            for (OrderDetailDTOcreate orderDetailDTOcreate : object.getOrderDetails()) {</span>
+<span class="nc" id="L198">                OrderDetail orderDetail = createOrderDetail(order, orderDetailDTOcreate);</span>
+                //cập nhật total price cho order
+<span class="nc" id="L200">                order.setTotalPrice(order.getTotalPrice() + (orderDetail.getAmount() * orderDetail.getPrice()));</span>
+<span class="nc" id="L201">            }</span>
+
+            //create payment order
+<span class="nc" id="L204">            createPaymentOrder(order, object);</span>
+
+            //gọi vn pay và nhận rs trả về để đổi status order
+<span class="nc" id="L207">            ResponseObject urlRs = paymentService.createPayment(req, Math.round(order.getTotalPrice()), userSystem.getId(), true, order.getId());</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">            if(urlRs.getCode() != 200){</span>
+<span class="nc" id="L209">                throw new Exception(urlRs.getMessage());</span>
+            }
+
+//            //chuyển hướng đến url payment của vn pay
+//            HttpHeaders headers = new HttpHeaders();
+//            headers.add(HttpHeaders.LOCATION, (String) urlRs.getData());
+//            return new ResponseEntity&lt;&gt;(headers, HttpStatus.FOUND);
+
+<span class="nc" id="L217">            return ResponseObject.builder()</span>
+<span class="nc" id="L218">                    .code(200)</span>
+<span class="nc" id="L219">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L220">                    .data((String) urlRs.getData())</span>
+<span class="nc" id="L221">                    .build();</span>
+<span class="nc" id="L222">        }catch (Exception e){</span>
+<span class="nc" id="L223">            throw new Exception(&quot;Exception: &quot; + e.getMessage());</span>
+        }
+    }
+
+    private UserSystem validateUserInOrder(OrderDTOcreate object) throws Exception{
+<span class="nc" id="L228">        UserSystem userSystem = null;</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">        if(object.getPhoneGuest() != null){</span>
+            //guest order COD
+<span class="nc" id="L231">            userSystem = userServiceCall.getDetailByEmail(EmailDefault.CUSTOMER_EMAIL_DEFAULT);</span>
+        }else{
+            //user order
+<span class="nc" id="L234">            userSystem =  userServiceCall.getObject(object.getCustomerId());</span>
+        }
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        if(userSystem == null){</span>
+<span class="nc" id="L237">            throw new Exception(&quot;user not found&quot;);</span>
+        }
+<span class="nc" id="L239">        return userSystem;</span>
+    }
+
+    private void createPaymentOrder(Order order, OrderDTOcreate object) throws Exception{
+<span class="nc" id="L243">        PaymentOrder paymentOrder = new PaymentOrder();</span>
+<span class="nc" id="L244">        paymentOrder.setOrder(order);</span>
+<span class="nc" id="L245">        paymentOrder.setMethod(object.getMethod());</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">        if(object.getPhoneGuest() != null){</span>
+<span class="nc" id="L247">            paymentOrder.setNameGuest(object.getNameGuest());</span>
+<span class="nc" id="L248">            paymentOrder.setPhoneGuest(object.getPhoneGuest());</span>
+<span class="nc" id="L249">            paymentOrder.setAddress(object.getAddress());</span>
+        }
+<span class="nc" id="L251">        paymentOrderRepository.save(paymentOrder);</span>
+<span class="nc" id="L252">    }</span>
+
+    private OrderDetail createOrderDetail(Order order, OrderDetailDTOcreate orderDetailDTOcreate) throws Exception{
+<span class="nc" id="L255">        OrderDetail orderDetail = modelMapper.map(orderDetailDTOcreate, OrderDetail.class);</span>
+
+<span class="nc" id="L257">        Food food = foodServiceCall.getDetail(orderDetailDTOcreate.getFoodId());</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">        if(food == null){</span>
+<span class="nc" id="L259">            throw new ObjectNotFound(&quot;food not found&quot;);</span>
+        }
+
+        //check stock của food trogn kho xem còn đủ không
+<span class="nc bnc" id="L263" title="All 2 branches missed.">        if(food.getStock() &lt; orderDetail.getAmount()){</span>
+<span class="nc" id="L264">            throw new Exception(&quot;stock not enough&quot;);</span>
+        }
+//        orderDetail.setId(new OrderDetailKey(food.getId(), order.getId()));
+<span class="nc" id="L267">        orderDetail.setFoodId(food.getId());</span>
+<span class="nc" id="L268">        orderDetail.setOrder(order);</span>
+<span class="nc" id="L269">        orderDetailRepository.save(orderDetail);</span>
+
+        //cập nhật lại stock cho food
+<span class="nc" id="L272">        food.setStock(food.getStock() - orderDetail.getAmount());</span>
+<span class="nc" id="L273">        FoodDTOupdate foodDTOupdate = modelMapper.map(food, FoodDTOupdate.class);</span>
+<span class="nc" id="L274">        String response = foodServiceCall.update(foodDTOupdate);</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">        if(!response.equals(StatusResponse.SUCCESS.toString())){</span>
+<span class="nc" id="L276">            log.error(&quot;update food error: &quot; + response);</span>
+        }else{
+<span class="nc" id="L278">            log.info(&quot;update food success: &quot; + response + &quot;|&quot; + foodDTOupdate.toString());</span>
+        }
+
+<span class="nc" id="L281">        return orderDetail;</span>
+    }
+
+    private void checkBalanceToMinus(Order order, UserSystem userSystem, OrderDTOcreate object) throws Exception {
+<span class="nc" id="L285">        int totalPrice = 0;</span>
+        //tính totalprice trước để check tiền trừ
+<span class="nc bnc" id="L287" title="All 2 branches missed.">        for (OrderDetailDTOcreate orderDetailDTOcreate : object.getOrderDetails()) {</span>
+<span class="nc" id="L288">            totalPrice += orderDetailDTOcreate.getPrice() * orderDetailDTOcreate.getAmount();</span>
+<span class="nc" id="L289">        }</span>
+<span class="nc" id="L290">        Wallet wallet = paymentServiceCall.detailObject(userSystem.getId());</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">        if(wallet.getBalance() &lt; totalPrice){</span>
+<span class="nc" id="L292">            throw new Exception(&quot;balance not enough&quot;);</span>
+        }else{
+            //thanh toán tiền
+//            wallet.setBalance(wallet.getBalance() - totalPrice);
+<span class="nc" id="L296">            WalletDTOupdate walletDTOupdate = WalletDTOupdate.builder().customerId(userSystem.getId()).balance(totalPrice * (-1)).build();</span>
+//            userSystemRepository.save(userSystem);
+            try{
+<span class="nc" id="L299">                String response = paymentServiceCall.updateObjectBalance(walletDTOupdate);</span>
+<span class="nc bnc" id="L300" title="All 2 branches missed.">                if(!response.equals(StatusResponse.SUCCESS.toString())){</span>
+<span class="nc" id="L301">                    throw new Exception(&quot;update wallet fail: &quot; + response);</span>
+                }else{
+<span class="nc" id="L303">                    log.info(&quot;update wallet success: &quot; + response +  &quot;|&quot; + walletDTOupdate.toString());</span>
+                }
+<span class="nc" id="L305">            }catch (Exception e){</span>
+<span class="nc" id="L306">                throw new Exception(&quot;update wallet error: &quot; + e.getMessage());</span>
+<span class="nc" id="L307">            }</span>
+            //create wallet transaction luôn
+            try{
+<span class="nc" id="L310">                String response = paymentServiceCall.createObject(WalletTransactionDTOcreate.builder()</span>
+<span class="nc" id="L311">                        .customerId(object.getCustomerId())</span>
+<span class="nc" id="L312">                        .amount(-totalPrice).description(&quot;Thanh toan don hang &quot; +order.getId())</span>
+<span class="nc" id="L313">                        .createDate(new Date(System.currentTimeMillis()))</span>
+<span class="nc" id="L314">                        .build());</span>
+<span class="nc bnc" id="L315" title="All 2 branches missed.">                if(!response.contains(StatusResponse.SUCCESS.toString())){</span>
+<span class="nc" id="L316">                    throw new Exception(&quot;create transaction fail: &quot; + response);</span>
+                }else{
+<span class="nc" id="L318">                    log.info(&quot;create transaction success: &quot; + response);</span>
+                }
+<span class="nc" id="L320">            }catch (Exception e){</span>
+<span class="nc" id="L321">                throw new Exception(&quot;create transaction error: &quot; + e.getMessage());</span>
+<span class="nc" id="L322">            }</span>
+        }
+<span class="nc" id="L324">    }</span>
+
+    private Order createOrder(UserSystem userSystem, OrderDTOcreate object) throws Exception {
+<span class="nc" id="L327">        Order order = new Order();</span>
+<span class="nc" id="L328">        order.setCreateDate(new Date(System.currentTimeMillis()));</span>
+<span class="nc" id="L329">        order.setCustomerId(userSystem.getId());</span>
+
+        //set default employee
+<span class="nc" id="L332">        UserSystem employee = userServiceCall.getDetailByEmail(EmailDefault.EMPLOYEE_EMAIL_DEFAULT);</span>
+<span class="nc bnc" id="L333" title="All 2 branches missed.">        if(employee == null){</span>
+<span class="nc" id="L334">            throw new ObjectNotFound(&quot;default employee not found&quot;);</span>
+        }
+<span class="nc" id="L336">        order.setEmployeeId(employee.getId());</span>
+
+        //set default shipper
+<span class="nc" id="L339">        UserSystem shipper = userServiceCall.getDetailByEmail(EmailDefault.SHIPPER_EMAIL_DEFAULT);</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">        if(shipper == null){</span>
+<span class="nc" id="L341">            throw new ObjectNotFound(&quot;default shipper not found&quot;);</span>
+        }
+<span class="nc" id="L343">        order.setShipperId(shipper.getId());</span>
+
+<span class="nc bnc" id="L345" title="All 2 branches missed.">        if(     object.getMethod().equals(Method.COD.toString()) ||</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">                object.getMethod().equals(Method.THIRDPARTY.toString())){   //vì COD, THIRDPARTY mới cần check duyệt, còn cái kia là thanh toán đơn luôn rồi</span>
+<span class="nc" id="L347">            order.setStatus(StatusOrder.PENDING.toString());</span>
+        }else{
+<span class="nc" id="L349">            order.setStatus(StatusOrder.ACCEPT.toString());</span>
+        }
+<span class="nc" id="L351">        order.setUpdateDate(null);</span>
+<span class="nc" id="L352">        order.setDeliveryTime(null);</span>
+<span class="nc" id="L353">        return order;</span>
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; updateStatus(OrderDTOupdate object) {
+        try{
+<span class="nc" id="L359">            Order object1 = ordersRepository.findById(object.getOrderId()).orElse(null);</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">            if(object1 == null) {</span>
+<span class="nc" id="L361">                throw new ObjectNotFound(&quot;Order not found&quot;);</span>
+            }
+<span class="nc" id="L363">            UserSystem employee = userServiceCall.getObject(object.getEmployeeId());</span>
+<span class="nc bnc" id="L364" title="All 2 branches missed.">            if(employee == null){</span>
+<span class="nc" id="L365">                throw new ObjectNotFound(&quot;employee is not found&quot;);</span>
+            }
+<span class="nc" id="L367">            object1.setStatus(object.getStatus());</span>
+<span class="nc" id="L368">            object1.setUpdateDate(new Date(System.currentTimeMillis()));</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">            if(     object.getStatus().equals(StatusOrder.REJECT.toString()) ||</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">                    object.getStatus().equals(StatusOrder.CANCEL.toString())){</span>
+                //trả lại stock cho food
+<span class="nc" id="L372">                updateStockToFood(object1.getOrderDetails());</span>
+            }
+<span class="nc" id="L374">            ordersRepository.save(object1);</span>
+<span class="nc" id="L375">            return ResponseObject.builder()</span>
+<span class="nc" id="L376">                    .code(200)</span>
+<span class="nc" id="L377">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L378">                    .build();</span>
+<span class="nc" id="L379">        }catch (Exception e){</span>
+<span class="nc" id="L380">            return ResponseObject.builder()</span>
+<span class="nc" id="L381">                    .code(400)</span>
+<span class="nc" id="L382">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L383">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; updateShipperTakeOrder(String orderId, String shipperId) {
+        try{
+<span class="nc" id="L390">            Order object1 = ordersRepository.findById(orderId).orElse(null);</span>
+<span class="nc bnc" id="L391" title="All 2 branches missed.">            if(object1 == null) {</span>
+<span class="nc" id="L392">                throw new ObjectNotFound(&quot;Order not found&quot;);</span>
+            }
+<span class="nc" id="L394">            UserSystem shipper = userServiceCall.getObject(shipperId);</span>
+<span class="nc bnc" id="L395" title="All 2 branches missed.">            if(shipper == null){</span>
+<span class="nc" id="L396">                throw new ObjectNotFound(&quot;shipper is not found&quot;);</span>
+            }
+<span class="nc bnc" id="L398" title="All 2 branches missed.">            if(!object1.getStatus().equals(StatusOrder.ACCEPT.toString())){</span>
+<span class="nc" id="L399">                throw new Exception(&quot;order must be accept&quot;);</span>
+            }
+<span class="nc" id="L401">            object1.setStatus(StatusOrder.WAITING.toString());</span>
+<span class="nc" id="L402">            object1.setUpdateDate(new Date(System.currentTimeMillis()));</span>
+<span class="nc" id="L403">            object1.setShipperId(shipper.getId());</span>
+<span class="nc" id="L404">            ordersRepository.save(object1);</span>
+
+            //noti đến ch order để báo cho họ bik
+            try{
+<span class="nc" id="L408">                boolean rs = notiServiceCall.create(NotificationDTOcreate.builder()</span>
+<span class="nc" id="L409">                        .userId(object1.getCustomerId())</span>
+<span class="nc" id="L410">                        .title(shipper.getName() +&quot; đã tiếp nhận đơn hàng &quot; + orderId + &quot; của bạn&quot;)</span>
+<span class="nc" id="L411">                        .build());</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">                if(!rs){</span>
+<span class="nc" id="L413">                    throw new Exception(&quot;create notification fail&quot;);</span>
+                }
+<span class="nc" id="L415">            }catch (Exception e){</span>
+<span class="nc" id="L416">                throw new Exception(&quot;create notification error: &quot; + e.getMessage());</span>
+<span class="nc" id="L417">            }</span>
+
+<span class="nc" id="L419">            return ResponseObject.builder()</span>
+<span class="nc" id="L420">                    .code(200)</span>
+<span class="nc" id="L421">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L422">                    .build();</span>
+<span class="nc" id="L423">        }catch (Exception e){</span>
+<span class="nc" id="L424">            return ResponseObject.builder()</span>
+<span class="nc" id="L425">                    .code(400)</span>
+<span class="nc" id="L426">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L427">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; finishDeilivery(String orderId, String shipperId) {
+        try{
+<span class="nc" id="L434">            Order object1 = ordersRepository.findById(orderId).orElse(null);</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">            if(object1 == null) {</span>
+<span class="nc" id="L436">                throw new ObjectNotFound(&quot;Order not found&quot;);</span>
+            }
+<span class="nc" id="L438">            UserSystem shipper = userServiceCall.getObject(shipperId);</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">            if(shipper == null){</span>
+<span class="nc" id="L440">                throw new ObjectNotFound(&quot;shipper is not found&quot;);</span>
+            }
+<span class="nc bnc" id="L442" title="All 2 branches missed.">            if(!object1.getStatus().equals(StatusOrder.WAITING.toString())){</span>
+<span class="nc" id="L443">                throw new Exception(&quot;order must be WAITING&quot;);</span>
+            }
+<span class="nc" id="L445">            object1.setStatus(StatusOrder.FINISH.toString());</span>
+<span class="nc" id="L446">            object1.setUpdateDate(new Date(System.currentTimeMillis()));</span>
+<span class="nc" id="L447">            object1.setDeliveryTime(new Date(System.currentTimeMillis()));</span>
+<span class="nc" id="L448">            object1.setShipperId(shipper.getId());</span>
+<span class="nc" id="L449">            ordersRepository.save(object1);</span>
+<span class="nc" id="L450">            return ResponseObject.builder()</span>
+<span class="nc" id="L451">                    .code(200)</span>
+<span class="nc" id="L452">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L453">                    .build();</span>
+<span class="nc" id="L454">        }catch (Exception e){</span>
+<span class="nc" id="L455">            return ResponseObject.builder()</span>
+<span class="nc" id="L456">                    .code(400)</span>
+<span class="nc" id="L457">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L458">                    .build();</span>
+        }
+    }
+
+    @Override
+    public ResponseObject&lt;Object&gt; cancelOrder(String orderId, String userId, String role) {
+        try{
+<span class="nc" id="L465">            Order object1 = ordersRepository.findById(orderId).orElse(null);</span>
+<span class="nc bnc" id="L466" title="All 2 branches missed.">            if(object1 == null) {</span>
+<span class="nc" id="L467">                throw new ObjectNotFound(&quot;Order not found&quot;);</span>
+            }
+            //valid role
+<span class="nc" id="L470">            List&lt;String&gt; roleCheck = List.of(Role.CUSTOMER.toString(), Role.SHIPPER.toString(), Role.EMPLOYEE.toString());</span>
+<span class="nc bnc" id="L471" title="All 2 branches missed.">            if(!roleCheck.contains(role)){</span>
+<span class="nc" id="L472">                throw new Exception(&quot;role is not valid, must be CUSTOMER/ SHIPPER or EMPLOYEE&quot;);</span>
+            }
+
+            //valid user
+<span class="nc" id="L476">            UserSystem userSystem = userServiceCall.getObject(userId);</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">            if(userSystem == null){</span>
+<span class="nc" id="L478">                throw new ObjectNotFound(&quot;user is not found&quot;);</span>
+            }
+<span class="nc bnc" id="L480" title="All 2 branches missed.">            if(!roleCheck.contains(userSystem.getRole())){</span>
+<span class="nc" id="L481">                throw new Exception(&quot;role is not valid, must be CUSTOMER/ SHIPPER or EMPLOYEE&quot;);</span>
+            }
+<span class="nc bnc" id="L483" title="All 2 branches missed.">            if(role.equals(Role.CUSTOMER.toString())){</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">                if (!object1.getCustomerId().equals(userSystem.getId())) {    //check xem order phải của cus này ko</span>
+<span class="nc" id="L485">                    throw new Exception(&quot;user is not own this order&quot;);</span>
+                }
+<span class="nc bnc" id="L487" title="All 2 branches missed.">                if(     object1.getStatus().equals(StatusOrder.ACCEPT.toString()) ||</span>
+<span class="nc bnc" id="L488" title="All 2 branches missed.">                        object1.getStatus().equals(StatusOrder.WAITING.toString()) ||</span>
+<span class="nc bnc" id="L489" title="All 2 branches missed.">                        object1.getStatus().equals(StatusOrder.FINISH.toString())){     //nếu order đã ACCPET thì ko CANCEL đc</span>
+<span class="nc" id="L490">                    throw new Exception(&quot;order can not cancel&quot;);</span>
+                }
+<span class="nc bnc" id="L492" title="All 2 branches missed.">            }else if(role.equals(Role.SHIPPER.toString())){</span>
+<span class="nc bnc" id="L493" title="All 2 branches missed.">                if (!object1.getShipperId().equals(userSystem.getId())) {    //check xem order phải của shipper này ko</span>
+<span class="nc" id="L494">                    throw new Exception(&quot;shipper is not own this order&quot;);</span>
+                }
+            }
+            //còn employee thì đứa nào cancel cũng đc
+<span class="nc" id="L498">            object1.setStatus(StatusOrder.CANCEL.toString());</span>
+<span class="nc" id="L499">            object1.setUpdateDate(new Date(System.currentTimeMillis()));</span>
+            //trả lại stock cho food
+<span class="nc" id="L501">            updateStockToFood(object1.getOrderDetails());</span>
+
+<span class="nc" id="L503">            ordersRepository.save(object1);</span>
+<span class="nc" id="L504">            return ResponseObject.builder()</span>
+<span class="nc" id="L505">                    .code(200)</span>
+<span class="nc" id="L506">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L507">                    .build();</span>
+<span class="nc" id="L508">        }catch (Exception e){</span>
+<span class="nc" id="L509">            return ResponseObject.builder()</span>
+<span class="nc" id="L510">                    .code(400)</span>
+<span class="nc" id="L511">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L512">                    .build();</span>
+        }
+    }
+
+    private void updateStockToFood(List&lt;OrderDetail&gt; orderDetails) throws Exception {
+<span class="nc bnc" id="L517" title="All 2 branches missed.">        for (OrderDetail orderDetail: orderDetails){</span>
+            //get food ra để update lại stock
+<span class="nc" id="L519">            Food food = foodServiceCall.getDetail(orderDetail.getFoodId());</span>
+<span class="nc" id="L520">            food.setStock(food.getStock() + orderDetail.getAmount());</span>
+
+            //update lại db
+            try{
+<span class="nc" id="L524">                FoodDTOupdate foodDTOupdate = modelMapper.map(food, FoodDTOupdate.class);</span>
+<span class="nc" id="L525">                String rs = foodServiceCall.update(foodDTOupdate);</span>
+<span class="nc bnc" id="L526" title="All 2 branches missed.">                if(!rs.equals(StatusResponse.SUCCESS.toString())){</span>
+<span class="nc" id="L527">                    throw new Exception(&quot;update food fail: &quot; + rs);</span>
+                }
+<span class="nc" id="L529">            }catch (Exception e){</span>
+<span class="nc" id="L530">                throw new Exception(&quot;update food error: &quot; + e.getMessage());</span>
+<span class="nc" id="L531">            }</span>
+<span class="nc" id="L532">        }</span>
+<span class="nc" id="L533">    }</span>
+
+    @Override
+    public ResponseObject&lt;Object&gt; delete(String id) {
+        try{
+<span class="nc" id="L538">            Order object = ordersRepository.findById(id).orElse(null);</span>
+<span class="nc bnc" id="L539" title="All 2 branches missed.">            if(object == null) {</span>
+<span class="nc" id="L540">                throw new Exception(OBJECT_NOT_FOUND);</span>
+            }
+            //delete order detail
+<span class="nc" id="L543">            orderDetailRepository.deleteAll(object.getOrderDetails());</span>
+            //delete payment order
+<span class="nc" id="L545">            paymentOrderRepository.delete(object.getPaymentOrder());</span>
+
+            //delete order
+<span class="nc" id="L548">            ordersRepository.delete(object);</span>
+<span class="nc" id="L549">            return ResponseObject.builder()</span>
+<span class="nc" id="L550">                    .code(200)</span>
+<span class="nc" id="L551">                    .message(&quot;Success&quot;)</span>
+<span class="nc" id="L552">                    .build();</span>
+<span class="nc" id="L553">        }catch (Exception e){</span>
+<span class="nc" id="L554">            return ResponseObject.builder()</span>
+<span class="nc" id="L555">                    .code(400)</span>
+<span class="nc" id="L556">                    .message(&quot;Exception: &quot; + e.getMessage())</span>
+<span class="nc" id="L557">                    .build();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
